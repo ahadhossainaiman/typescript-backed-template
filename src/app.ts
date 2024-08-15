@@ -2,10 +2,11 @@ import  path from 'path';
 // Import the 'express' module
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import express, { Application, Request, Response } from 'express';
+import express, { Application, NextFunction, Request, Response } from 'express';
 import router from './config/routes';
 import globalErrorHandler from './middlewares/globalErrorHandler';
 import notFound from './middlewares/notFound';
+import logger from './logger/logger';
 
 
 
@@ -20,7 +21,13 @@ app.use(cors({
     origin: true,
     credentials: true
 }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static("public"));
+// app.use("/public", express.static(__dirname + "/public"));
+
+app.use((req: Request, res: Response, next: NextFunction) => {
+  logger.info(`Incoming request: ${req.method} ${req.url}`);
+  next();
+});
 
 //application router
 app.use('/api/v1',router)
@@ -30,13 +37,19 @@ app.use('/api/v1',router)
 
 // Define a route for the root path ('/')
 app.get('/', (req: Request, res: Response) => {
-  // Send a response to the client
-  res.send('Hello, This Ahad Hossaion Aiman form Bangladesh!');
+  logger.info('Root endpoint hit');
+  res.send('Hello, This is Ahad Hossaion Aiman from Bangladesh!');
 });
-
 
 app.all('*',notFound)
 app.use(globalErrorHandler)
+
+
+// Log errors
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  logger.error(`Error occurred: ${err.message}`, { stack: err.stack });
+  next(err);
+});
 
 
 // Start the server and listen on the specified port

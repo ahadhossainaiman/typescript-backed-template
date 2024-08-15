@@ -4,9 +4,10 @@ import userModel from "../modules/User/user.model";
 
 
 const admin = {
+    name: 'MD Admin',
     email: 'admin@gmail.com',
     password: config.superAdminPassword,
-    role: 'admin',
+    role: 'ADMIN',
     isDeleted: false
 }
 

@@ -23,7 +23,7 @@ const userRegister = async ({
   }
  if(!oneTimeCode) return;
 
- const user = await userModel.create({name,email,role,oneTimeCode});
+ const user = await userModel.create({name,email,role,password,oneTimeCode});
 
   setTimeout(async () => {
     try {

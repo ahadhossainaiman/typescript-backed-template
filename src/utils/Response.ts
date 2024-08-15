@@ -38,14 +38,7 @@ type ResponseType = {
       status: response.status,
       statusCode: response.statusCode,
       message: response.message,
-      data: {},
-      pagination: {
-        totalPage: 0,
-        currentPage: 0,
-        prevPage: null,
-        nextPage: null,
-        totalData: 0,
-      },
+      data: {}
     };
   
     if (response.type) {

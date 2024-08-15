@@ -2,7 +2,7 @@ import { genSaltSync, hash, compare } from "bcryptjs";
 import config from "../config";
 
 
-const salt = genSaltSync(config.bcryptSaltRounds);
+const salt = genSaltSync(Number(config.bcryptSaltRounds));
 
 export async function hashPassword(password: string) {
     return await hash(password, salt);

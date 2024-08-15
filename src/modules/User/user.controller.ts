@@ -2,6 +2,9 @@ import { Request, Response } from "express";
 import myResponse from "../../utils/Response";
 import userModel from "./user.model";
 import userRegister from "../../service/userRegister";
+import verifyCodeService from "../../service/verifyCodeService";
+import { sentOtpByEmail } from "../../service/emailService";
+import { generateToken } from "../../service/jwtService";
 
 const signUp = async (req: Request, res: Response) => {
   try {
@@ -58,5 +61,187 @@ const signUp = async (req: Request, res: Response) => {
   }
 };
 
+const verifyCode = async (req: Request, res: Response) => {
+  try {
+    const { email, code } = req.body;
+    const user = await userModel.findOne({ email });
+    if (!email || !code) {
+      return res.status(400).json(
+        myResponse({
+          statusCode: 404,
+          status: "failed",
+          message: "All fields are required",
+        })
+      );
+    }
+    if (!user) {
+      return res.status(400).json(
+        myResponse({
+          statusCode: 404,
+          status: "failed",
+          message: "User not found",
+        })
+      );
+    }
+    if (user.oneTimeCode === code) {
+      await verifyCodeService(user, code);
+      res.status(200).json(
+        myResponse({
+          statusCode: 200,
+          status: "success",
+          message: "User verified successfully",
+        })
+      );
+    } else {
+      return res.status(400).json(
+        myResponse({
+          statusCode: 400,
+          status: "failed",
+          message: "Invalid code",
+        })
+      );
+    }
+  } catch (error) {
+    console.error("Error in verifyCode controller:", error);
+    res.status(500).json(
+      myResponse({
+        statusCode: 500,
+        status: "failed",
+        message: "Internal Server Error",
+      })
+    );
+  }
+};
 
-export { signUp};
+const resendOtp = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json(
+        myResponse({
+          statusCode: 400,
+          status: "failed",
+          message: "Email are required",
+        })
+      );
+    }
+
+    const user = await userModel.findOne({ email });
+
+    if (!user) {
+      return res.status(400).json(
+        myResponse({
+          statusCode: 400,
+          status: "failed",
+          message: "User not found",
+        })
+      );
+    }
+
+    // Generate a new OTP
+    const oneTimeCode =
+      Math.floor(Math.random() * (999999 - 100000 + 1)) + 100000;
+
+    if (user.oneTimeCode === null) {
+      return res.status(400).json(
+        myResponse({
+          statusCode: 400,
+          status: "failed",
+          message: "OTP already sent",
+        })
+      );
+    }
+
+    user.oneTimeCode = oneTimeCode;
+
+    await user.save();
+
+    await sentOtpByEmail(email, oneTimeCode);
+
+    res.status(200).json(
+      myResponse({
+        statusCode: 200,
+        status: "success",
+        message: "OTP has been resent successfully",
+      })
+    );
+  } catch (error) {
+    console.error("Error resending OTP:", error);
+    res.status(500).json(
+      myResponse({
+        statusCode: 500,
+        status: "Failed",
+        message: "Failed to resend OTP",
+      })
+    );
+  }
+};
+
+const forgotPassword = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json(
+        myResponse({
+          statusCode: 400,
+          status: "failed",
+          message: "Email are required",
+        })
+      );
+    }
+
+    const user = await userModel.findOne({ email });
+
+    if (!user) {
+      return res.status(400).json(
+        myResponse({
+          statusCode: 400,
+          status: "failed",
+          message: "User not found",
+        })
+      );
+    }
+
+    const oneTimeCode =
+      Math.floor(Math.random() * (999999 - 100000 + 1)) + 100000;
+
+    try {
+      sentOtpByEmail(email, oneTimeCode);
+    } catch (error) {
+      console.error("Failed to send verification email", error);
+      throw new Error("Error creating user");
+    }
+
+    user.oneTimeCode = oneTimeCode;
+    await user.save();
+
+    const accessToken = generateToken({
+      email: user.email,
+      id: user._id.toString(),
+      name: user.name,
+      role: user.role,
+    });
+
+    res.status(200).json(
+      myResponse({
+        statusCode: 200,
+        status: "success",
+        message: "A verification code is sent to your email",
+        data: {
+          accessToken,
+        },
+      })
+    );
+  } catch (error: any) {
+    console.error("Error in forgotPassword controller:", error);
+    res.status(500).json(
+      myResponse({
+        statusCode: 500,
+        message: `Internal server error ${error.message}`,
+        status: "Failed",
+      })
+    );
+  }
+};
+
+export { signUp, verifyCode, resendOtp, forgotPassword };

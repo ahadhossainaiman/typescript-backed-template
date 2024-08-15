@@ -7,15 +7,15 @@ export type TokenData = {
   id: string;
   name: string;
   email: string;
-  image: string | null;
   role: string;
 };
 
 const secret = config.jwtAccessSecret as string;
 if (!secret) throw new Error("JWT_SECRET is not defined");
+const expiresInOneHour = 36000; 
 
-export function generateToken({ id, name, email, image, role }: TokenData) {
-  return sign({ id, name, email, image, role }, secret);
+export function generateToken({ id, name, email, role }: TokenData) {
+  return sign({ id,name, email, role }, secret,{expiresIn: expiresInOneHour});
 }
 
 export function verifyToken(token: string) {

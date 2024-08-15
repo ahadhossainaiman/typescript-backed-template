@@ -1,14 +1,14 @@
 import { Router } from "express";
-import { signUp } from "./user.controller";
+import { resendOtp, signUp, verifyCode } from "./user.controller";
 
 
 const router = Router();
 
-router.post(
-  '/register',
-//   validationMiddleware(UserValidations.userRegistrationValidationSchema),
-signUp,
-);
+router.post('/register',signUp);
+router.post('/verify-code',verifyCode)
+router.post('/resend-otp',resendOtp)
+router.post('/forgot-password',resendOtp)
+
 // router.post(
 //   '/login',
 //   validationMiddleware(UserValidations.userLoginUserValidationSchema),
