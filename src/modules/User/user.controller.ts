@@ -4,7 +4,7 @@ import userModel from "./user.model";
 import userRegister from "../../service/userRegister";
 import verifyCodeService from "../../service/verifyCodeService";
 import { sentOtpByEmail } from "../../service/emailService";
-import { generateToken } from "../../service/jwtService";
+import { generateToken, verifyToken } from "../../service/jwtService";
 
 const signUp = async (req: Request, res: Response) => {
   try {
@@ -64,6 +64,8 @@ const signUp = async (req: Request, res: Response) => {
 const verifyCode = async (req: Request, res: Response) => {
   try {
     const { email, code } = req.body;
+    console.log(email, code);
+
     const user = await userModel.findOne({ email });
     if (!email || !code) {
       return res.status(400).json(
@@ -85,11 +87,22 @@ const verifyCode = async (req: Request, res: Response) => {
     }
     if (user.oneTimeCode === code) {
       await verifyCodeService(user, code);
+
+      const accessToken = generateToken({
+        email: user.email,
+        id: user._id.toString(),
+        name: user.name,
+        role: user.role,
+      });
+
       res.status(200).json(
         myResponse({
           statusCode: 200,
           status: "success",
           message: "User verified successfully",
+          data: {
+            token: accessToken,
+          },
         })
       );
     } else {
@@ -215,21 +228,11 @@ const forgotPassword = async (req: Request, res: Response) => {
     user.oneTimeCode = oneTimeCode;
     await user.save();
 
-    const accessToken = generateToken({
-      email: user.email,
-      id: user._id.toString(),
-      name: user.name,
-      role: user.role,
-    });
-
     res.status(200).json(
       myResponse({
         statusCode: 200,
         status: "success",
         message: "A verification code is sent to your email",
-        data: {
-          accessToken,
-        },
       })
     );
   } catch (error: any) {
@@ -244,4 +247,75 @@ const forgotPassword = async (req: Request, res: Response) => {
   }
 };
 
-export { signUp, verifyCode, resendOtp, forgotPassword };
+const setPassword = async (req: Request, res: Response) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json(
+        myResponse({
+          statusCode: 400,
+          status: "failed",
+          message: "Token or password are required",
+        })
+      );
+    }
+    const userData = verifyToken(token);
+
+    if (!userData) {
+      return res.status(400).json(
+        myResponse({
+          statusCode: 400,
+          status: "failed",
+          message: "Invalid token",
+        })
+      );
+    }
+
+    const expireDate = new Date(userData.exp * 1000);
+    if (expireDate < new Date()) {
+      return res.status(400).json(
+        myResponse({
+          statusCode: 400,
+          status: "failed",
+          message: "Token expired",
+        })
+      );
+    }
+
+    const user = await userModel.findOne({ _id: userData.id });
+    if (!user) {
+      return res.status(400).json(
+        myResponse({
+          statusCode: 400,
+          status: "failed",
+          message: "User not found",
+        })
+      );
+    }
+
+    user.password = password;
+    await user.save();
+
+    res.status(200).json(
+      myResponse({
+        statusCode: 200,
+        status: "success",
+        message: "Password has been set successfully",
+      })
+    );
+  } catch (error: any) {
+    console.error("Error in setPassword controller:", error);
+    res.status(500).json(
+      myResponse({
+        statusCode: 500,
+        message: `Internal server error ${error.message}`,
+        status: "Failed",
+      })
+    );
+  }
+};
+
+
+
+export { signUp, verifyCode, resendOtp, forgotPassword, setPassword };

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { resendOtp, signUp, verifyCode } from "./user.controller";
+import { forgotPassword, resendOtp, setPassword, signUp, verifyCode } from "./user.controller";
 
 
 const router = Router();
@@ -7,8 +7,8 @@ const router = Router();
 router.post('/register',signUp);
 router.post('/verify-code',verifyCode)
 router.post('/resend-otp',resendOtp)
-router.post('/forgot-password',resendOtp)
-
+router.post('/forgot-password',forgotPassword)
+router.post('/set-password',setPassword)
 // router.post(
 //   '/login',
 //   validationMiddleware(UserValidations.userLoginUserValidationSchema),
